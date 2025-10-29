@@ -1,5 +1,6 @@
 """Transcription service."""
 
+import os
 import subprocess
 import time
 
@@ -18,8 +19,9 @@ class TranscribeService:
             True if service is healthy, False otherwise
         """
         try:
+            command = config.transcribe_command + ['--health']
             result: subprocess.CompletedProcess = subprocess.run(
-                ['pink-transcriber', '--health'],
+                command,
                 capture_output=True,
                 timeout=config.health_check_timeout
             )
@@ -41,14 +43,29 @@ class TranscribeService:
         Raises:
             RuntimeError: If transcription fails
         """
+        transcribe_path = config.convert_path_for_transcribe(audio_path)
+        command = config.transcribe_command + [transcribe_path]
+
+        if config.dev_mode:
+            filename = os.path.basename(audio_path)
+            print(f"⏳ Transcribing {filename}...", flush=True)
+
         result: subprocess.CompletedProcess = subprocess.run(
-            ['pink-transcriber', audio_path],
+            command,
             capture_output=True,
             text=True
         )
+
         if result.returncode != 0:
             raise RuntimeError(f"Transcription failed: {result.stderr}")
-        return result.stdout.strip()
+
+        text = result.stdout.strip()
+
+        if config.dev_mode and text:
+            text_with_disclaimer = f"{config.disclaimer} {text}"
+            print(f"✓ {text_with_disclaimer}\n", flush=True)
+
+        return text
 
     @staticmethod
     def wait_for_service() -> bool:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pink Voice - Voice transcription for macOS.
+Pink Voice - Voice transcription client.
 
 Entry point for the application.
 """
@@ -15,15 +15,26 @@ import warnings
 warnings.filterwarnings('ignore')
 os.environ['PYTHONWARNINGS'] = 'ignore'
 
-# Ensure /usr/local/bin is in PATH
-if 'PATH' not in os.environ or '/usr/local/bin' not in os.environ['PATH']:
-    os.environ['PATH'] = '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:' + os.environ.get('PATH', '')
+# Ensure common binary paths are in PATH (needed when launched from Finder)
+home = os.path.expanduser('~')
+common_paths = [
+    f'{home}/.local/bin',
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin'
+]
+os.environ['PATH'] = ':'.join(common_paths) + ':' + os.environ.get('PATH', '')
 
 # Suppress pynput accessibility warning
 _original_stderr = sys.stderr
 sys.stderr = open(os.devnull, 'w')
 
-import rumps
+# Import rumps only on macOS
+if os.uname().sysname == "Darwin":
+    import rumps
 
 # Restore stderr after imports
 sys.stderr.close()
@@ -31,12 +42,12 @@ sys.stderr = _original_stderr
 
 from pink_voice.config import config
 from pink_voice.services.transcribe import TranscribeService
-from pink_voice.ui.app import VoiceInputApp
+from pink_voice.hotkeys.listener import HotkeyListener
 
 
 def main() -> None:
     """Main entry point."""
-    # Fix locale for proper UTF-8 encoding when launched via Spotlight/LaunchAgent
+    # Fix locale for proper UTF-8 encoding
     if 'LANG' not in os.environ:
         os.environ['LANG'] = 'en_US.UTF-8'
     if 'LC_ALL' not in os.environ:
@@ -45,55 +56,95 @@ def main() -> None:
     if config.dev_mode:
         print("\n" + "="*50, flush=True)
         print("   🎙️  Pink Voice - Voice Transcription", flush=True)
+        print(f"   Platform: {config.platform} | UI: {config.ui_mode}", flush=True)
         print("="*50, flush=True)
 
     try:
         # Check service BEFORE creating app
-        if config.dev_mode:
+        if config.dev_mode or config.ui_mode == "headless":
             if not TranscribeService.health_check():
                 print("✗ pink-transcriber service not running", flush=True)
                 sys.exit(1)
-            print("✓ pink-transcriber is ready (dev mode)", flush=True)
+            print("✓ pink-transcriber service is ready", flush=True)
         else:
+            # macOS production mode - wait with popup on failure
             if not TranscribeService.wait_for_service():
-                # In production, show popup and exit
+                error_msg = (
+                    "pink-transcriber daemon is not running.\n\n"
+                    "Pink Voice requires the pink-transcriber service to transcribe audio.\n\n"
+                    "Install from: github.com/pinkhairedboy/pink-transcriber"
+                )
+
+                import rumps
                 rumps.alert(
                     title="Pink Voice - Service Not Found",
-                    message="pink-transcriber daemon is not running.\n\n"
-                            "Pink Voice requires the pink-transcriber service to transcribe audio.\n\n"
-                            "Install from: github.com/pinkhairedboy/pink-transcriber\n\n"
-                            "Or check if daemon is running:\n"
-                            "  launchctl list | grep pink-transcriber",
+                    message=error_msg + "\n\nOr check if daemon is running:\n  launchctl list | grep pink-transcriber",
                     ok="OK"
                 )
                 sys.exit(1)
 
-        if config.dev_mode:
-            print("✓ pink-transcriber service is ready", flush=True)
-
-        app: VoiceInputApp = VoiceInputApp()
-
-        if config.dev_mode:
-            print("\n✅ Ready! Press Ctrl+Q to start recording\n", flush=True)
-
-        # Show notification after app is fully initialized
-        app.show_ready_notification()
-
-        def signal_handler(sig: int, frame) -> None:
-            app.cleanup()
-            os._exit(0)
-
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-
+        # Request microphone permission upfront
         try:
-            app.run()
-        finally:
-            app.cleanup()
-            os._exit(0)
+            import sounddevice as sd
+            stream = sd.InputStream(samplerate=config.sample_rate, channels=1, dtype='int16')
+            stream.start()
+            stream.stop()
+            stream.close()
+        except Exception:
+            pass
+
+        # Create UI based on mode
+        if config.ui_mode == "macos":
+            from pink_voice.ui.macos import MacOSUI
+            app = MacOSUI()
+
+            # Setup hotkey listener
+            hotkey_listener = HotkeyListener(on_trigger=app.toggle_recording)
+            hotkey_listener.start()
+
+            if config.dev_mode:
+                print("\n✅ macOS UI ready! Listening for Ctrl+Q\n", flush=True)
+
+            def signal_handler(sig: int, frame) -> None:
+                hotkey_listener.stop()
+                app.cleanup()
+                os._exit(0)
+
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
+
+            try:
+                app.run()
+            finally:
+                hotkey_listener.stop()
+                app.cleanup()
+                os._exit(0)
+
+        else:
+            from pink_voice.ui.headless import HeadlessUI
+            app = HeadlessUI()
+
+            # Setup hotkey listener
+            hotkey_listener = HotkeyListener(on_trigger=app.toggle_recording)
+            hotkey_listener.start()
+
+            def signal_handler(sig: int, frame) -> None:
+                hotkey_listener.stop()
+                app.cleanup()
+                os._exit(0)
+
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
+
+            try:
+                app.run()
+            finally:
+                hotkey_listener.stop()
+                app.cleanup()
+                os._exit(0)
 
     except Exception as e:
-        # Top-level exception handler - show popup with error
+        # Top-level exception handler
         error_msg: str = str(e)
         stack_trace: str = traceback.format_exc()
 
@@ -101,13 +152,18 @@ def main() -> None:
             print(f"\n❌ Fatal error: {error_msg}\n", flush=True)
             print(stack_trace, flush=True)
 
-        # Show error popup
-        rumps.alert(
-            title="Pink Voice Error",
-            message=f"An unexpected error occurred:\n\n{error_msg}\n\n"
-                    f"Stack trace:\n{stack_trace[:500]}...",
-            ok="OK"
-        )
+        # Show error based on UI mode
+        if config.ui_mode == "macos":
+            import rumps
+            rumps.alert(
+                title="Pink Voice Error",
+                message=f"An unexpected error occurred:\n\n{error_msg}\n\n"
+                        f"Stack trace:\n{stack_trace[:500]}...",
+                ok="OK"
+            )
+        else:
+            print(f"\n❌ Fatal error: {error_msg}\n{stack_trace}", flush=True)
+
         sys.exit(1)
 
 

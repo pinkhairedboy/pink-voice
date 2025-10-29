@@ -5,30 +5,35 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pink-voice"
 version = "1.1.0"
-description = "Lightweight macOS menu bar client for pink-transcriber voice transcription service"
+description = "Cross-platform voice transcription client for pink-transcriber service"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.10"
 authors = [
     {name = "Pink Voice Team"}
 ]
-keywords = ["transcription", "speech-to-text", "macos", "menu-bar", "voice-input"]
+keywords = ["transcription", "speech-to-text", "voice-input", "cross-platform"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
 ]
 
 dependencies = [
-    "sounddevice~=0.5.2",
-    "numpy~=1.26.4",
-    "scipy~=1.16.2",
-    "rumps~=0.4.0",
-    "pynput~=1.8.1",
+    "sounddevice~=0.5.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "pynput~=1.8.0",
+    "pyperclip~=1.8.0",
+    "rumps~=0.4.0; sys_platform == 'darwin'",
 ]
 
 [project.urls]

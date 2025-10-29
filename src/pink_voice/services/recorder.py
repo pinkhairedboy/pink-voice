@@ -42,13 +42,11 @@ class AudioRecorder:
         if self.recording:
             return False
 
-        # Clear queue
         while not self.audio_queue.empty():
             self.audio_queue.get()
 
         self.recording = True
 
-        # Create and start stream
         self.stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=1,
@@ -71,13 +69,11 @@ class AudioRecorder:
 
         self.recording = False
 
-        # Stop and close stream
         if self.stream:
             self.stream.stop()
             self.stream.close()
             self.stream = None
 
-        # Collect all audio data from queue
         audio_data: list[np.ndarray] = []
         while not self.audio_queue.empty():
             audio_data.append(self.audio_queue.get())
@@ -85,7 +81,6 @@ class AudioRecorder:
         if not audio_data:
             return None
 
-        # Concatenate and save
         audio: np.ndarray = np.concatenate(audio_data, axis=0)
 
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:

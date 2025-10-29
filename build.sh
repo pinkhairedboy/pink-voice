@@ -4,24 +4,26 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-echo "Building Pink Voice.app"
+echo "Building Pink Voice.app (macOS)"
 echo ""
 
-# Check venv exists
-if [ ! -d "venv" ]; then
-    echo "ERROR: venv not found"
-    echo "Run: python3.12 -m venv venv && source venv/bin/activate && pip install -e ."
+# Check uv installed
+if ! command -v uv &> /dev/null; then
+    echo "ERROR: uv not found"
+    echo ""
+    echo "Install uv:"
+    echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo ""
     exit 1
 fi
 
-# Activate venv
-source venv/bin/activate
+# Sync dependencies (creates venv + installs)
+echo "Syncing dependencies..."
+uv sync
 
-# Check pyinstaller installed
-if ! command -v pyinstaller &> /dev/null; then
-    echo "Installing PyInstaller..."
-    pip install pyinstaller
-fi
+# Install pyinstaller
+echo "Installing PyInstaller..."
+uv pip install pyinstaller
 
 # Clean previous build
 echo "Cleaning previous build..."
@@ -29,23 +31,16 @@ rm -rf build dist
 
 # Build .app
 echo "Building .app bundle..."
-pyinstaller PinkVoice.spec
+uv run pyinstaller PinkVoice.spec
 
 echo ""
 echo "✓ Build complete!"
 echo ""
 echo "Output: dist/Pink Voice.app"
 echo ""
-echo "Resetting permissions for fresh install..."
-tccutil reset All com.pink.voice 2>/dev/null || echo "  (no previous permissions to reset)"
-tccutil reset Microphone com.pink.voice 2>/dev/null
-tccutil reset ListenEvent com.pink.voice 2>/dev/null
+echo "To run:"
+echo "  open \"dist/Pink Voice.app\""
 echo ""
-echo "Installing to /Applications..."
-rm -rf "/Applications/Pink Voice.app"
-cp -R "dist/Pink Voice.app" /Applications/
-echo "✓ Installed to /Applications/Pink Voice.app"
-echo ""
-echo "To run: open \"/Applications/Pink Voice.app\""
-echo "To setup auto-start: ./install.sh"
+echo "To install to /Applications:"
+echo "  cp -R \"dist/Pink Voice.app\" /Applications/"
 echo ""

@@ -1,24 +1,30 @@
 # Pink Voice
 
-Lightweight macOS menu bar client for pink-transcriber voice transcription service.
+Cross-platform voice transcription client for pink-transcriber service.
 
-**⚠️ Requires [pink-transcriber](https://github.com/pinkhairedboy/pink-transcriber) daemon** - records audio only, transcription happens via pink-transcriber service.
+**⚠️ Requires [pink-transcriber](https://github.com/pinkhairedboy/pink-transcriber) daemon**
 
 Records audio via Ctrl+Q hotkey, sends to pink-transcriber daemon, copies transcribed text to clipboard.
 
-## How it works
+## Platforms
 
-Menu bar app captures audio when you press Ctrl+Q. On second press, stops recording, calls `pink-transcriber` CLI with audio file, copies result to clipboard. App is ~50MB, delegates all ML work to pink-transcriber daemon.
+- **macOS**: Menu bar app with hotkey
+- **Windows**: Headless console app with hotkey (calls WSL pink-transcriber)
+- **Linux**: Headless console app with hotkey
 
 ## Requirements
 
-- macOS 12+ with Apple Silicon (M1-M5)
-- Python 3.12
-- **pink-transcriber daemon** (install first from github.com/pinkhairedboy/pink-transcriber)
+- **macOS**: macOS 12+, Python 3.10+
+- **Windows**: Windows 10+, Python 3.10+, WSL2 with pink-transcriber installed
+- **Linux**: Python 3.10+
+- **uv** package manager ([install](https://docs.astral.sh/uv/getting-started/installation/))
+- **pink-transcriber daemon** running (macOS/Linux) or in WSL (Windows)
 
 ## Installation
 
-Install pink-transcriber first:
+### 1. Install pink-transcriber
+
+**macOS/Linux:**
 ```bash
 git clone https://github.com/pinkhairedboy/pink-transcriber.git
 cd pink-transcriber
@@ -26,46 +32,141 @@ cd pink-transcriber
 pink-transcriber --health  # Verify daemon is running
 ```
 
-Then install pink-voice:
+**Windows (WSL):**
+```bash
+# In WSL terminal
+git clone https://github.com/pinkhairedboy/pink-transcriber.git
+cd pink-transcriber
+./install.sh
+pink-transcriber --health  # Verify daemon is running
+```
+
+### 2. Install uv
+
+**macOS/Linux:**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows:**
+```powershell
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### 3. Build Pink Voice
+
+**macOS:**
 ```bash
 git clone https://github.com/pinkhairedboy/pink-voice.git
 cd pink-voice
 ./build.sh
-./install.sh
+
+# Output: dist/Pink Voice.app
+# Install: cp -R "dist/Pink Voice.app" /Applications/
 ```
 
-App appears in menu bar, starts automatically on login.
+**Windows:**
+```cmd
+git clone https://github.com/pinkhairedboy/pink-voice.git
+cd pink-voice
+build.bat
+
+REM Output: dist\PinkVoice.exe
+```
+
+Build script runs `uv sync` (one command: creates venv + installs dependencies) then builds with PyInstaller.
 
 ## Usage
 
-Press **Ctrl+Q** to start recording. Press **Ctrl+Q** again to stop. Transcribed text appears in clipboard.
+### macOS (Menu Bar App)
 
-Or click menu bar icon:
+Press **Ctrl+Q** to start/stop recording. Menu bar icon shows status.
+
+Menu options:
 - Start Recording
 - Stop Recording
 - Transcribing... (processing)
 - Quit
 
-## Development
+### Windows/Linux (Headless)
 
-```bash
-./dev.sh         # Run in terminal with verbose logging
-./uninstall.sh   # Remove LaunchAgent and app
+Run `PinkVoice.exe` (Windows) or `python -m pink_voice` (Linux).
+
+Console shows:
+```
+==================================================
+   Pink Voice (Headless)
+==================================================
+
+Press Ctrl+Q to start recording
+Press Ctrl+C to quit
+
+✓ Ready
+🎙️  Recording... (press Ctrl+Q to stop)
+⏳ Transcribing...
+
+✓ Transcribed: [Voice input - ...] your text here
+
+✓ Ready
 ```
 
-## Troubleshooting
+Press **Ctrl+Q** to record, **Ctrl+C** to quit.
 
-If recording fails with "service not available":
+## Development
+
+One command to setup and run:
+
 ```bash
-pink-transcriber --health           # Check daemon status
-launchctl list | grep pink          # Check if running
+# macOS/Linux
+git clone https://github.com/pinkhairedboy/pink-voice.git
+cd pink-voice
+
+# Setup (one command)
+uv sync
+
+# Run with DEV logs
+DEV=1 uv run python -m pink_voice
+
+# Force headless mode
+PINK_VOICE_UI=headless uv run python -m pink_voice
+```
+
+**Windows:**
+```cmd
+git clone https://github.com/pinkhairedboy/pink-voice.git
+cd pink-voice
+
+REM Setup (one command)
+uv sync
+
+REM Run with DEV logs
+set DEV=1 && uv run python -m pink_voice
 ```
 
 ## Architecture
 
-- `src/pink_voice/ui/app.py` - Menu bar interface (rumps)
-- `src/pink_voice/services/recorder.py` - Audio recording (sounddevice)
-- `src/pink_voice/services/transcribe.py` - pink-transcriber client (subprocess)
-- `src/pink_voice/hotkeys/listener.py` - Ctrl+Q handler (pynput)
-- Thread-safe dispatch ensures CoreAudio streams managed on main thread
-- Uses queue.Queue() for audio data from PortAudio callback
+```
+src/pink_voice/
+├── main.py                    # Entry point, platform detection
+├── config.py                  # Platform-aware configuration
+├── ui/
+│   ├── base.py               # Base UI class (shared logic)
+│   ├── macos.py              # macOS menu bar UI (rumps)
+│   └── headless.py           # Headless console UI
+├── platform/
+│   ├── clipboard.py          # Cross-platform clipboard
+│   ├── sounds.py             # Cross-platform sounds
+│   └── notifications.py      # Cross-platform notifications
+├── services/
+│   ├── recorder.py           # Audio recording (sounddevice)
+│   └── transcribe.py         # pink-transcriber client
+└── hotkeys/
+    └── listener.py           # Ctrl+Q handler (pynput)
+```
+
+**Key features:**
+- Automatic platform detection
+- Windows: converts paths to WSL format, calls `wsl pink-transcriber`
+- macOS: native menu bar with notifications
+- Headless: always shows status in console
+- No log files, no services, no installation required

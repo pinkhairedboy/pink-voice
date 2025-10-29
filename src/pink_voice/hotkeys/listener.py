@@ -56,9 +56,6 @@ class HotkeyListener:
         )
         self.listener.start()
 
-        if config.dev_mode:
-            print("✓ Hotkey registered: Ctrl+Q (sequential press)", flush=True)
-
     def stop(self) -> None:
         """Stop listening for hotkey presses."""
         if self.listener:
