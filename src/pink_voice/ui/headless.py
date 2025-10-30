@@ -28,20 +28,20 @@ class HeadlessUI(BaseUI):
     def update_status(self, status: str) -> None:
         """Update status (always print to console in headless mode)."""
         status_map = {
-            "idle": "✓ Ready",
             "recording": "🎙️  Recording... (press Ctrl+Q to stop)",
             "transcribing": "⏳ Transcribing...",
         }
-        message = status_map.get(status, status)
-        print(message, flush=True)
+        message = status_map.get(status)
+        if message:
+            print(message, flush=True)
 
     def on_transcription_success(self, text: str) -> None:
         """Show transcription result in console."""
-        print(f"\n✓ Transcribed: {text}\n", flush=True)
+        print(f"✓ Transcribed: {text}", flush=True)
 
     def on_transcription_error(self, error: str) -> None:
         """Show error in console."""
-        print(f"\n✗ Error: {error}\n", flush=True)
+        print(f"✗ Error: {error}", flush=True)
 
     def run(self) -> None:
         """Run the headless app (block until interrupted)."""

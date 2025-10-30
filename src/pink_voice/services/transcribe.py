@@ -19,7 +19,12 @@ class TranscribeService:
             True if service is healthy, False otherwise
         """
         try:
-            command = config.transcribe_command + ['--health']
+            if config.platform == "windows":
+                # Windows: use wsl bash -lc to load PATH
+                command = ['wsl', 'bash', '-lc', 'pink-transcriber --health']
+            else:
+                command = config.transcribe_command + ['--health']
+
             result: subprocess.CompletedProcess = subprocess.run(
                 command,
                 capture_output=True,
@@ -44,28 +49,24 @@ class TranscribeService:
             RuntimeError: If transcription fails
         """
         transcribe_path = config.convert_path_for_transcribe(audio_path)
-        command = config.transcribe_command + [transcribe_path]
 
-        if config.dev_mode:
-            filename = os.path.basename(audio_path)
-            print(f"⏳ Transcribing {filename}...", flush=True)
+        if config.platform == "windows":
+            # Windows: use wsl bash -lc with full command as string
+            command = ['wsl', 'bash', '-lc', f'pink-transcriber {transcribe_path}']
+        else:
+            command = config.transcribe_command + [transcribe_path]
 
         result: subprocess.CompletedProcess = subprocess.run(
             command,
             capture_output=True,
-            text=True
+            text=True,
+            encoding='utf-8'
         )
 
         if result.returncode != 0:
             raise RuntimeError(f"Transcription failed: {result.stderr}")
 
-        text = result.stdout.strip()
-
-        if config.dev_mode and text:
-            text_with_disclaimer = f"{config.disclaimer} {text}"
-            print(f"✓ {text_with_disclaimer}\n", flush=True)
-
-        return text
+        return result.stdout.strip()
 
     @staticmethod
     def wait_for_service() -> bool:
@@ -77,14 +78,8 @@ class TranscribeService:
         """
         for attempt in range(config.service_max_attempts):
             if TranscribeService.health_check():
-                if config.dev_mode:
-                    print(f"✓ pink-transcriber is ready (attempt {attempt + 1})", flush=True)
                 return True
             if attempt < config.service_max_attempts - 1:
-                if config.dev_mode:
-                    print(f"⏳ Waiting for pink-transcriber... ({attempt + 1}/{config.service_max_attempts})", flush=True)
                 time.sleep(config.service_wait_interval)
 
-        if config.dev_mode:
-            print("✗ pink-transcriber failed to start after 6 seconds", flush=True)
         return False

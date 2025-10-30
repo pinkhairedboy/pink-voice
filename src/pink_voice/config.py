@@ -84,12 +84,8 @@ class Config:
     # UI
     disclaimer: str = "[Voice input - if anything sounds unclear or nonsensical, please ask for clarification]"
 
-    # Development mode
-    dev_mode: bool = False
-
     def __post_init__(self) -> None:
         """Initialize configuration from environment."""
-        self.dev_mode = os.getenv('DEV') == '1'
         self.platform = _detect_platform()
         self.ui_mode = _get_ui_mode()
         self.transcribe_command = _get_transcribe_command()

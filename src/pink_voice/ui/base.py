@@ -27,8 +27,6 @@ class BaseUI(ABC):
     def _start_recording(self) -> None:
         """Start audio recording."""
         if self.recorder.start_recording():
-            if config.dev_mode:
-                print("🎙️  Start recording", flush=True)
             self.update_status("recording")
             self.play_sound("start")
 
@@ -38,8 +36,6 @@ class BaseUI(ABC):
             return
 
         self.is_processing = True
-        if config.dev_mode:
-            print("⏹️  Stop recording", flush=True)
         self.play_sound("stop")
         self.update_status("transcribing")
 

@@ -33,7 +33,8 @@ _original_stderr = sys.stderr
 sys.stderr = open(os.devnull, 'w')
 
 # Import rumps only on macOS
-if os.uname().sysname == "Darwin":
+import platform
+if platform.system() == "Darwin":
     import rumps
 
 # Restore stderr after imports
@@ -47,21 +48,21 @@ from pink_voice.hotkeys.listener import HotkeyListener
 
 def main() -> None:
     """Main entry point."""
-    # Fix locale for proper UTF-8 encoding
     if 'LANG' not in os.environ:
         os.environ['LANG'] = 'en_US.UTF-8'
     if 'LC_ALL' not in os.environ:
         os.environ['LC_ALL'] = 'en_US.UTF-8'
 
-    if config.dev_mode:
-        print("\n" + "="*50, flush=True)
-        print("   🎙️  Pink Voice - Voice Transcription", flush=True)
-        print(f"   Platform: {config.platform} | UI: {config.ui_mode}", flush=True)
-        print("="*50, flush=True)
+    try:
+        import codecs
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except Exception:
+        pass
 
     try:
         # Check service BEFORE creating app
-        if config.dev_mode or config.ui_mode == "headless":
+        if config.ui_mode == "headless":
             if not TranscribeService.health_check():
                 print("✗ pink-transcriber service not running", flush=True)
                 sys.exit(1)
@@ -101,9 +102,6 @@ def main() -> None:
             # Setup hotkey listener
             hotkey_listener = HotkeyListener(on_trigger=app.toggle_recording)
             hotkey_listener.start()
-
-            if config.dev_mode:
-                print("\n✅ macOS UI ready! Listening for Ctrl+Q\n", flush=True)
 
             def signal_handler(sig: int, frame) -> None:
                 hotkey_listener.stop()
@@ -147,10 +145,6 @@ def main() -> None:
         # Top-level exception handler
         error_msg: str = str(e)
         stack_trace: str = traceback.format_exc()
-
-        if config.dev_mode:
-            print(f"\n❌ Fatal error: {error_msg}\n", flush=True)
-            print(stack_trace, flush=True)
 
         # Show error based on UI mode
         if config.ui_mode == "macos":

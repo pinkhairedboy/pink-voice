@@ -34,7 +34,8 @@ class HotkeyListener:
                 self.ctrl_is_held = True
                 return
 
-            if key_name == 'q' and self.ctrl_is_held and not self.hotkey_triggered:
+            # Check for 'q' OR '\x11' (Ctrl+Q control character on Windows)
+            if (key_name == 'q' or key_name == '\x11') and self.ctrl_is_held and not self.hotkey_triggered:
                 self.hotkey_triggered = True
                 self.on_trigger()
 
@@ -47,7 +48,8 @@ class HotkeyListener:
             if key_name in ('Key.ctrl_l', 'Key.ctrl_r', 'Key.ctrl'):
                 self.ctrl_is_held = False
 
-            if key_name == 'q':
+            # Reset trigger on 'q' OR '\x11' release
+            if key_name == 'q' or key_name == '\x11':
                 self.hotkey_triggered = False
 
         self.listener = keyboard.Listener(

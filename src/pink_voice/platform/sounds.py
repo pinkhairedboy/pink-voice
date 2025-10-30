@@ -43,11 +43,12 @@ def _play_sound_windows(sound_type: str) -> None:
     try:
         import winsound
         sound_map = {
-            "start": winsound.MB_OK,
-            "stop": winsound.MB_OK,
-            "done": winsound.MB_ICONASTERISK,
+            "start": r"C:\Windows\Media\Speech On.wav",
+            "stop": r"C:\Windows\Media\Speech Sleep.wav",
+            "done": r"C:\Windows\Media\Speech Disambiguation.wav",
         }
-        sound = sound_map.get(sound_type, winsound.MB_OK)
-        winsound.MessageBeep(sound)
-    except ImportError:
+        sound_path = sound_map.get(sound_type)
+        if sound_path:
+            winsound.PlaySound(sound_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+    except (ImportError, RuntimeError):
         pass
