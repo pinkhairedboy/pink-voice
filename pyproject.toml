@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pink-voice"
+version = "1.0.0"
+description = "Cross-platform voice transcription client for pink-transcriber service"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "pinkhairedboy", email = "pink@pinkhaired.com"}
+]
+keywords = ["transcription", "speech-to-text", "voice-input", "cross-platform"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+dependencies = [
+    "sounddevice~=0.5.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "pynput~=1.8.0",
+    "pyperclip~=1.8.0",
+    "rumps~=0.4.0; sys_platform == 'darwin'",
+    "psutil>=6.1.0",
+    "setproctitle>=1.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pinkhairedboy/pink-voice"
+Repository = "https://github.com/pinkhairedboy/pink-voice"
+"Bug Tracker" = "https://github.com/pinkhairedboy/pink-voice/issues"
+"pink-transcriber" = "https://github.com/pinkhairedboy/pink-transcriber"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pink_voice = ["assets/*"]
+
+[project.scripts]
+pink-voice = "pink_voice.main:main"
