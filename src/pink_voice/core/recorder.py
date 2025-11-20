@@ -66,12 +66,13 @@ class AudioRecorder:
         Returns:
             Path to temporary WAV file, or None if no audio recorded
         """
-        self.recording = False
+        if not self.recording or not self.stream:
+            return None
 
-        if self.stream:
-            self.stream.stop()
-            self.stream.close()
-            self.stream = None
+        self.stream.stop()
+        self.stream.close()
+        self.stream = None
+        self.recording = False
 
         if os.getenv('DEV') == '1':
             print("Recording stopped", flush=True)
