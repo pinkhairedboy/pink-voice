@@ -42,24 +42,7 @@ class MacOSUI(BaseUI, rumps.App):
     def toggle_recording(self) -> None:
         """
         Toggle recording on/off.
-        Ensures _toggle_recording_impl is called on main thread.
         """
-        try:
-            from AppKit import NSThread
-
-            if NSThread.isMainThread():
-                self._toggle_recording_impl()
-            else:
-                self.performSelectorOnMainThread_withObject_waitUntilDone_(
-                    '_toggle_recording_impl',
-                    None,
-                    False
-                )
-        except Exception:
-            self._toggle_recording_impl()
-
-    def _toggle_recording_impl(self) -> None:
-        """Toggle recording implementation. MUST be called from main thread only."""
         if self.is_processing:
             return
 
@@ -77,8 +60,8 @@ class MacOSUI(BaseUI, rumps.App):
         }
         self.recording_button.title = status_map.get(status, "Start Recording")
 
-        # Print status to console in DEV mode
-        if os.getenv('DEV') == '1':
+        # Print status to console in VERBOSE mode
+        if os.getenv('VERBOSE') == '1':
             console_status_map = {
                 "recording": "🎙️  Recording... (press Ctrl+Q to stop)",
                 "transcribing": "⏳ Transcribing...",

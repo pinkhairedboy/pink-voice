@@ -56,7 +56,7 @@ class TranscribeService:
         else:
             command = config.transcribe_command + [transcribe_path]
 
-        if os.getenv('DEV') == '1':
+        if os.getenv('VERBOSE') == '1':
             print("Transcribing...", flush=True)
 
         result: subprocess.CompletedProcess = subprocess.run(
@@ -71,7 +71,7 @@ class TranscribeService:
 
         text = result.stdout.strip()
 
-        if os.getenv('DEV') == '1':
+        if os.getenv('VERBOSE') == '1':
             print(f"Result: {text}", flush=True)
 
         return text

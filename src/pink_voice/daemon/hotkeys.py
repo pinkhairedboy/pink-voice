@@ -27,7 +27,7 @@ class HotkeyListener:
 
     def start(self) -> None:
         """Start listening for hotkey presses."""
-        if os.getenv('DEV') == '1':
+        if os.getenv('VERBOSE') == '1':
             print("Listening for Ctrl+Q", flush=True)
 
         def on_press(key: keyboard.Key) -> None:

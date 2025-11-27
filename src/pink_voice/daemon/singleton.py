@@ -121,33 +121,60 @@ def ensure_single_instance(process_name: str) -> None:
             process_name = proc.info['name'] or ''
 
             # Check if any project identifier in cmdline or process name
+            is_target = False
             for identifier in SINGLETON_IDENTIFIERS:
-                if identifier in cmdline or identifier in process_name:
-                    if VERBOSE_MODE:
-                        print(f"[Singleton] Found target process PID {proc.info['pid']} (name: {process_name}): {cmdline}")
-
-                    # Find root of this process tree (use existing proc object to avoid race condition)
-                    root = _find_root_process(proc, excluded_pids)
-
-                    # Skip if already killed this root
-                    if root.pid in killed_roots:
-                        if VERBOSE_MODE:
-                            print(f"[Singleton]   -> Root PID {root.pid} already killed, skipping")
-                        break
-
-                    if VERBOSE_MODE:
-                        try:
-                            root_cmdline = ' '.join(root.cmdline()) if root.cmdline() else 'N/A'
-                            print(f"[Singleton]   -> Root process PID {root.pid}: {root_cmdline}")
-                        except:
-                            print(f"[Singleton]   -> Root process PID {root.pid}")
-
-                    # Kill entire tree from root
-                    killed = _kill_process_tree(root, VERBOSE_MODE)
-                    killed_count += killed
-                    killed_roots.add(root.pid)
-
+                # 1. Check process name (e.g. "Pink Voice")
+                if identifier in process_name:
+                    is_target = True
                     break
+                
+                # 2. Check command line arguments (executable or script)
+                # We only check the first few arguments to avoid matching flags like --workspace_id
+                if proc.info['cmdline']:
+                    # Check argv[0] (executable path)
+                    if identifier in proc.info['cmdline'][0]:
+                        is_target = True
+                        break
+                    
+                    # Check argv[1] (script path or module for python)
+                    # e.g. "python main.py" or "python -m pink_voice"
+                    if len(proc.info['cmdline']) > 1:
+                        if identifier in proc.info['cmdline'][1]:
+                            is_target = True
+                            break
+                        
+                    # Check argv[2] (module name if -m is used)
+                    if len(proc.info['cmdline']) > 2 and proc.info['cmdline'][1] == '-m':
+                        if identifier in proc.info['cmdline'][2]:
+                            is_target = True
+                            break
+
+            if not is_target:
+                continue
+
+            if VERBOSE_MODE:
+                print(f"[Singleton] Found target process PID {proc.info['pid']} (name: {process_name}): {cmdline}")
+
+            # Find root of this process tree (use existing proc object to avoid race condition)
+            root = _find_root_process(proc, excluded_pids)
+
+            # Skip if already killed this root
+            if root.pid in killed_roots:
+                if VERBOSE_MODE:
+                    print(f"[Singleton]   -> Root PID {root.pid} already killed, skipping")
+                continue
+
+            if VERBOSE_MODE:
+                try:
+                    root_cmdline = ' '.join(root.cmdline()) if root.cmdline() else 'N/A'
+                    print(f"[Singleton]   -> Root process PID {root.pid}: {root_cmdline}")
+                except:
+                    print(f"[Singleton]   -> Root process PID {root.pid}")
+
+            # Kill entire tree from root
+            killed = _kill_process_tree(root, VERBOSE_MODE)
+            killed_count += killed
+            killed_roots.add(root.pid)
 
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass

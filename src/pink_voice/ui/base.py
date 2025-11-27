@@ -57,6 +57,10 @@ class BaseUI(ABC):
             if not text:
                 text = "[No speech detected]"
 
+            # Prepend prefix if configured
+            if config.transcription_prefix:
+                text = config.transcription_prefix + text
+
             self.on_transcription_success(text)
             self.play_sound("done")
             self.copy_to_clipboard(text)

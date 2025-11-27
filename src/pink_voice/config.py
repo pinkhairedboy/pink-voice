@@ -106,11 +106,15 @@ class Config:
     # Audio
     sample_rate: int = 16000
 
+    # Text processing
+    transcription_prefix: str = ""
+
     def __post_init__(self) -> None:
         """Initialize configuration from environment."""
         self.platform = _detect_platform()
         self.ui_mode = _get_ui_mode()
         self.transcribe_command = _get_transcribe_command()
+        self.transcription_prefix = os.getenv('TRANSCRIPTION_PREFIX', '')
 
     def convert_path_for_transcribe(self, path: str) -> str:
         """

@@ -27,8 +27,8 @@ class HeadlessUI(BaseUI):
             self._start_recording()
 
     def update_status(self, status: str) -> None:
-        """Update status (print only in DEV mode)."""
-        if os.getenv('DEV') != '1':
+        """Update status (print only in VERBOSE mode)."""
+        if os.getenv('VERBOSE') != '1':
             return
 
         status_map = {

@@ -8,6 +8,7 @@ Entry point for the application.
 # Disable output buffering BEFORE any imports
 import os
 import sys
+
 os.environ['PYTHONUNBUFFERED'] = '1'
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
@@ -57,10 +58,14 @@ from pink_voice.config import config
 from pink_voice.core.transcribe import TranscribeService
 from pink_voice.daemon.hotkeys import HotkeyListener
 from pink_voice.daemon.singleton import ensure_single_instance
+import multiprocessing
 
 
 def main() -> None:
     """Main entry point."""
+    # Required for PyInstaller/multiprocessing on macOS/Windows
+    multiprocessing.freeze_support()
+
     if 'LANG' not in os.environ:
         os.environ['LANG'] = 'en_US.UTF-8'
     if 'LC_ALL' not in os.environ:
