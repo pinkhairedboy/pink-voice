@@ -1,0 +1,68 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+block_cipher = None
+
+a = Analysis(
+    ['src/pink_voice/__main__.py'],
+    pathex=[],
+    binaries=[],
+    datas=[],
+    hiddenimports=[
+        'pink_voice',
+        'pink_voice.main',
+        'pink_voice.config',
+        'pink_voice.ui',
+        'pink_voice.ui.base',
+        'pink_voice.ui.headless',
+        'pink_voice.platform',
+        'pink_voice.platform.clipboard',
+        'pink_voice.platform.sounds',
+        'pink_voice.platform.notifications',
+        'pink_voice.core',
+        'pink_voice.core.recorder',
+        'pink_voice.core.transcribe',
+        'pink_voice.daemon',
+        'pink_voice.daemon.singleton',
+        'pink_voice.daemon.hotkeys',
+        'pynput',
+        'sounddevice',
+        'numpy',
+        'scipy',
+        'pyperclip',
+        'plyer',
+        'winsound',
+        'psutil',
+        'setproctitle',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=['rumps', 'objc', 'HIServices', 'Quartz', 'CoreFoundation'],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='Pink Voice',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
